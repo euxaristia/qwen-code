@@ -137,6 +137,7 @@ interface AppContainerProps {
   startupWarnings?: string[];
   version: string;
   initializationResult: InitializationResult;
+  initialQuery?: string;
 }
 
 /**
@@ -152,7 +153,7 @@ const SHELL_WIDTH_FRACTION = 0.89;
 const SHELL_HEIGHT_PADDING = 10;
 
 export const AppContainer = (props: AppContainerProps) => {
-  const { settings, config, initializationResult } = props;
+  const { settings, config, initializationResult, initialQuery } = props;
   const historyManager = useHistory();
   useMemoryMonitor(historyManager);
   const [debugMessage, setDebugMessage] = useState<string>('');
@@ -535,6 +536,13 @@ export const AppContainer = (props: AppContainerProps) => {
     startNewSession,
     remount: refreshStatic,
   });
+
+  // Auto-open resume dialog if initial query is /resume
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim() === '/resume') {
+      openResumeDialog();
+    }
+  }, [initialQuery, openResumeDialog]);
 
   const { toggleVimEnabled } = useVimMode();
 
