@@ -4,15 +4,17 @@ pub mod jsonrpc;
 pub mod session_updates;
 
 // Re-exports for convenience
+pub use agent_request::*;
 pub use agent_response::*;
 pub use client_request::*;
 pub use content::ContentBlock;
 pub use permission::*;
 pub use plan::*;
 pub use session::*;
-pub use terminal::*;
+pub use terminal as terminal_types;
 pub use tool::*;
 
+pub mod agent_request;
 pub mod agent_response;
 pub mod client_request;
 pub mod content;
