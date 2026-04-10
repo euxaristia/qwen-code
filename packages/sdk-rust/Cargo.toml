@@ -1,0 +1,23 @@
+[package]
+name = "acp-sdk"
+version = "0.1.0"
+edition = "2021"
+description = "Rust SDK for the Agent Client Protocol (ACP)"
+license = "MIT"
+repository = "https://github.com/QwenLM/qwen-code"
+readme = "README.md"
+
+[dependencies]
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+url = "2"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3"
