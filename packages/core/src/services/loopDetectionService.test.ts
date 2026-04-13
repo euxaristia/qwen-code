@@ -619,4 +619,136 @@ describe('LoopDetectionService', () => {
       expect(service.addAndCheck(otherEvent)).toBe(false);
     });
   });
+
+  describe('Repetitive Thoughts Detection', () => {
+    it('should detect repetitive thoughts pattern', () => {
+      service.reset('');
+
+      // Simulate repetitive thinking patterns
+      for (let i = 0; i < 3; i++) {
+        service.addAndCheck(createContentEvent('Thinking about the problem...'));
+      }
+
+      const isLoop = service.addAndCheck(createContentEvent('Still thinking about the same problem...'));
+      expect(isLoop).toBe(true);
+      expect(loggers.logLoopDetected).toHaveBeenCalledWith(
+        mockConfig,
+        expect.objectContaining({
+          loop_type: 'repetitive_thoughts',
+        })
+      );
+    });
+
+    it('should not detect loop with varied thoughts', () => {
+      service.reset('');
+
+      service.addAndCheck(createContentEvent('Thinking about the problem...'));
+      service.addAndCheck(createContentEvent('Considering the solution...'));
+      service.addAndCheck(createContentEvent('Analyzing the requirements...'));
+
+      const isLoop = service.addAndCheck(createContentEvent('Now evaluating alternatives...'));
+      expect(isLoop).toBe(false);
+      expect(loggers.logLoopDetected).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Read File Loop Detection', () => {
+    it('should detect excessive file read operations', () => {
+      service.reset('');
+
+      // Simulate multiple file read operations
+      for (let i = 0; i < 5; i++) {
+        const event = createToolCallRequestEvent('read_file', { path: `file${i}.txt` });
+        const isLoop = service.addAndCheck(event);
+        expect(isLoop).toBe(false); // Should not trigger until threshold
+      }
+
+      // Next call should trigger the loop detection
+      const event = createToolCallRequestEvent('read_file', { path: 'file5.txt' });
+      const isLoop = service.addAndCheck(event);
+      expect(isLoop).toBe(true);
+      expect(loggers.logLoopDetected).toHaveBeenCalledWith(
+        mockConfig,
+        expect.objectContaining({
+          loop_type: 'read_file_loop',
+        })
+      );
+    });
+
+    it('should detect other read-like operations', () => {
+      service.reset('');
+
+      // Mix of different read operations
+      service.addAndCheck(createToolCallRequestEvent('cat_file', { path: 'file1.txt' }));
+      service.addAndCheck(createToolCallRequestEvent('view_file', { path: 'file2.txt' }));
+      service.addAndCheck(createToolCallRequestEvent('list_files', { dir: '.' }));
+      service.addAndCheck(createToolCallRequestEvent('read_file', { path: 'file3.txt' }));
+
+      const isLoop = service.addAndCheck(createToolCallRequestEvent('cat_file', { path: 'file4.txt' }));
+      expect(isLoop).toBe(true);
+      expect(loggers.logLoopDetected).toHaveBeenCalledWith(
+        mockConfig,
+        expect.objectContaining({
+          loop_type: 'read_file_loop',
+        })
+      );
+    });
+
+    it('should not detect loop with mixed operations', () => {
+      service.reset('');
+
+      // Mix of read and non-read operations
+      service.addAndCheck(createToolCallRequestEvent('read_file', { path: 'file1.txt' }));
+      service.addAndCheck(createToolCallRequestEvent('write_file', { path: 'file2.txt', content: 'test' }));
+      service.addAndCheck(createToolCallRequestEvent('read_file', { path: 'file3.txt' }));
+      service.addAndCheck(createToolCallRequestEvent('execute', { command: 'ls' }));
+      service.addAndCheck(createToolCallRequestEvent('read_file', { path: 'file4.txt' }));
+
+      const isLoop = service.addAndCheck(createToolCallRequestEvent('read_file', { path: 'file5.txt' }));
+      expect(isLoop).toBe(false);
+      expect(loggers.logLoopDetected).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Action Stagnation Detection', () => {
+    it('should detect action stagnation with repetitive non-productive actions', () => {
+      service.reset('');
+
+      // Perform non-productive actions repeatedly
+      for (let i = 0; i < 8; i++) {
+        const event = createToolCallRequestEvent('read_file', { path: `temp${i}.txt` });
+        const isLoop = service.addAndCheck(event);
+        expect(isLoop).toBe(false); // Should not trigger until threshold
+      }
+
+      // Next call should trigger stagnation detection
+      const event = createToolCallRequestEvent('view_file', { path: 'temp9.txt' });
+      const isLoop = service.addAndCheck(event);
+      expect(isLoop).toBe(true);
+      expect(loggers.logLoopDetected).toHaveBeenCalledWith(
+        mockConfig,
+        expect.objectContaining({
+          loop_type: 'action_stagnation',
+        })
+      );
+    });
+
+    it('should reset stagnation counter when productive action occurs', () => {
+      service.reset('');
+
+      // Accumulate stagnation
+      for (let i = 0; i < 6; i++) {
+        service.addAndCheck(createToolCallRequestEvent('read_file', { path: `temp${i}.txt` }));
+      }
+
+      // Perform a productive action
+      service.addAndCheck(createToolCallRequestEvent('write_file', { path: 'output.txt', content: 'result' }));
+
+      // Continue with read operations - should not trigger stagnation immediately
+      for (let i = 0; i < 6; i++) {
+        const isLoop = service.addAndCheck(createToolCallRequestEvent('read_file', { path: `temp${i + 10}.txt` }));
+        expect(isLoop).toBe(false);
+      }
+    });
+  });
 });
