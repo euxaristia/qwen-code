@@ -88,3 +88,6 @@ storybook-static
 
 # Dev symlink: qc-helper bundled skill docs (created by scripts/dev.js)
 packages/core/src/skills/bundled/qc-helper/docs
+
+# Rust build artifacts
+packages/sdk-rust/target/
